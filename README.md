@@ -7,7 +7,7 @@ Singularity – это высокопроизводительная систем
 Для установки Singularity выполните следующие шаги:
 1. Клонируйте репозиторий:
    ```
-   git clone https://example.com/singularity.git
+   git clone https://github.com/eagurin/Singularity.git
    ```
 2. Перейдите в директорию проекта:
    ```
