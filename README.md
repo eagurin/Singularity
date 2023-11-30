@@ -1,3 +1,5 @@
+![3A5E4B1C-611B-49CE-940C-F72937D68C99](https://github.com/eagurin/Singularity/assets/22112139/fc978258-606c-4b1e-9764-aefe33307b5b)
+
 # Singularity
 
 ## Описание
