@@ -1,0 +1,16 @@
+
+sequenceDiagram
+    participant User as User
+    participant FastAPIApp as FastAPI Application
+    participant Router as Router
+    participant Endpoint as Endpoint
+    participant Service as Service
+    participant Database as Database
+    User->>FastAPIApp: Request(API Call)
+    FastAPIApp->>Router: Determine Route
+    Router->>Endpoint: Route to Endpoint
+    Endpoint->>Service: Call Service Logic
+    Service->>Database: Query Database
+    Database-->>Service: Return Results
+    Service-->>Endpoint: Return Data
+    Endpoint-->>FastAPIApp: Respond to User

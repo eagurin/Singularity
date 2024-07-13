@@ -1,0 +1,32 @@
+
+classDiagram
+    class FastAPIApp {
+        +start() void
+    }
+    class Router {
+        +route() void
+    }
+    class Endpoint {
+        +handle() void
+    }
+    class Service {
+        +execute() void
+    }
+    class Database {
+        +connect() void
+        +disconnect() void
+    }
+    class Model {
+        +id int
+        +name string
+    }
+    class Schema {
+        +model_id int
+        +model_data string
+    }
+    FastAPIApp --> Router : uses
+    Router --> Endpoint : routes
+    Endpoint --> Service : calls
+    Service --> Database : uses
+    Database --> Model : stores
+    Model --> Schema : validates
