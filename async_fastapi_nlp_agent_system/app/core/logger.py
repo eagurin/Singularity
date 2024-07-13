@@ -1,16 +1,26 @@
 ## app/core/logger.py
 import logging
-from logging.handlers import RotatingFileHandler
 import os
+from logging.handlers import RotatingFileHandler
+
 from fastapi.logger import logger as fastapi_logger
+
 
 class LoggerConfig:
     """Logger configuration class."""
+
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
-    LOG_TO_FILE: bool = os.getenv("LOG_TO_FILE", "False").lower() in ("true", "1", "t")
+    LOG_TO_FILE: bool = os.getenv("LOG_TO_FILE", "False").lower() in (
+        "true",
+        "1",
+        "t",
+    )
     LOG_FILE_PATH: str = os.getenv("LOG_FILE_PATH", "./logs/app.log")
-    LOG_FILE_MAX_BYTES: int = int(os.getenv("LOG_FILE_MAX_BYTES", "10485760"))  # 10MB
+    LOG_FILE_MAX_BYTES: int = int(
+        os.getenv("LOG_FILE_MAX_BYTES", "10485760")
+    )  # 10MB
     LOG_FILE_BACKUP_COUNT: int = int(os.getenv("LOG_FILE_BACKUP_COUNT", "5"))
+
 
 def configure_logging():
     """
@@ -31,7 +41,7 @@ def configure_logging():
         file_handler = RotatingFileHandler(
             LoggerConfig.LOG_FILE_PATH,
             maxBytes=LoggerConfig.LOG_FILE_MAX_BYTES,
-            backupCount=LoggerConfig.LOG_FILE_BACKUP_COUNT
+            backupCount=LoggerConfig.LOG_FILE_BACKUP_COUNT,
         )
         file_handler.setLevel(log_level)
         formatter = logging.Formatter(
@@ -43,6 +53,7 @@ def configure_logging():
     # Configure FastAPI logger to use the same configuration as the root logger
     fastapi_logger.handlers = root_logger.handlers
     fastapi_logger.setLevel(log_level)
+
 
 # Call the configure_logging function to configure the logger at the module level
 configure_logging()

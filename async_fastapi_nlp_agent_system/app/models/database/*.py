@@ -1,14 +1,18 @@
 ## app/models/database/*.py
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, Table
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
 # Many-to-many association table for groups and tasks
-group_tasks = Table('group_tasks', Base.metadata,
-                    Column('group_id', ForeignKey('groups.id'), primary_key=True),
-                    Column('task_id', ForeignKey('tasks.id'), primary_key=True))
+group_tasks = Table(
+    "group_tasks",
+    Base.metadata,
+    Column("group_id", ForeignKey("groups.id"), primary_key=True),
+    Column("task_id", ForeignKey("tasks.id"), primary_key=True),
+)
+
 
 class Agent(Base):
     __tablename__ = "agents"
@@ -20,6 +24,7 @@ class Agent(Base):
     role = relationship("Role", back_populates="agents")
     tasks = relationship("Task", back_populates="agent")
 
+
 class Role(Base):
     __tablename__ = "roles"
 
@@ -28,11 +33,13 @@ class Role(Base):
 
     agents = relationship("Agent", back_populates="role")
 
+
 class Influence(Base):
     __tablename__ = "influences"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
+
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -43,6 +50,7 @@ class Task(Base):
 
     agent = relationship("Agent", back_populates="tasks")
 
+
 class Group(Base):
     __tablename__ = "groups"
 
@@ -51,12 +59,14 @@ class Group(Base):
 
     tasks = relationship("Task", secondary=group_tasks)
 
+
 class News(Base):
     __tablename__ = "news"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     content = Column(Text)
+
 
 class Recommendation(Base):
     __tablename__ = "recommendations"
@@ -65,12 +75,14 @@ class Recommendation(Base):
     title = Column(String, index=True)
     content = Column(Text)
 
+
 class Training(Base):
     __tablename__ = "training"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     content = Column(Text)
+
 
 class Feedback(Base):
     __tablename__ = "feedback"
