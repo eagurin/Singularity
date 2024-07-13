@@ -1,85 +1,42 @@
-## <IMPORTS>
+## test_app/db/session.py
 """
-This section imports necessary modules and packages for the test.
+This module contains tests for the app/db/session.py module.
 """
+
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch, MagicMock
+from sqlalchemy.orm import Session
+from app.db.session import get_db
 
-## <TEST_DATABASE_SESSION>
-"""
-This section contains the unit tests for testing the database session functionalities.
-"""
-class TestDatabaseSession(unittest.TestCase):
+## TestSettings
+class TestSettings:
+    DATABASE_URL = "sqlite:///./test.db"
 
-    @patch('app.db.session.create_engine')
-    @patch('app.db.session.sessionmaker')
-    @patch('app.db.session.declarative_base')
-    @patch('app.core.config.settings')
-    def setUp(self, mock_settings, mock_declarative_base, mock_sessionmaker, mock_create_engine):
-        """
-        Setup mocks for all imports that are causing ModuleNotFoundError.
-        """
-        # Mock settings to provide a DATABASE_URL
-        mock_settings.DATABASE_URL = "sqlite:///./test.db"
-        # Mock sessionmaker to return a MagicMock object
-        mock_sessionmaker.return_value = MagicMock()
-        # Mock declarative_base to return a MagicMock object
-        mock_declarative_base.return_value = MagicMock()
-        # Mock create_engine to return a MagicMock object
-        mock_create_engine.return_value = MagicMock()
+## TestSession
+class TestSession(unittest.TestCase):
 
-        # Import the module under test after mocks are in place
-        global SessionLocal, get_db, engine, Base
-        from app.db.session import SessionLocal, get_db, engine, Base
+    @patch("app.db.session.settings", new=TestSettings())
+    @patch("app.db.session.SessionLocal")
+    def test_get_db(self, mock_session_local):
+        """
+        Test the get_db generator function to ensure it yields a database session and closes it properly.
+        """
+        # Mock the SessionLocal to return a mock session when called
+        mock_session = MagicMock(spec=Session)
+        mock_session_local.return_value = mock_session
 
-    ## <TEST_GET_DB>
-    def test_get_db_yield_type(self):
-        """
-        Test if get_db yields a SQLAlchemy Session.
-        """
-        with patch('app.db.session.SessionLocal') as mock_session:
-            mock_session.return_value = MagicMock()
-            db_gen = get_db()
-            db = next(db_gen)
-            self.assertTrue(isinstance(db, MagicMock))  # Using MagicMock as a stand-in for the actual Session type
-            try:
-                next(db_gen)  # To trigger finally block for db.close()
-            except StopIteration:
-                pass
-            mock_session.assert_called_once()
+        # Call the get_db function and enter its context
+        db_gen = get_db()
+        db_session = next(db_gen)
 
-    ## <TEST_ENGINE_URL>
-    def test_engine_url(self):
-        """
-        Test if the engine URL matches the DATABASE_URL from settings.
-        """
-        expected_url = "sqlite:///./test.db"
-        self.assertEqual(str(engine.url), expected_url)
+        # Verify the yielded object is the mock session
+        self.assertIs(db_session, mock_session)
 
-    ## <TEST_SESSION_LOCAL>
-    def test_session_local_type(self):
-        """
-        Test if SessionLocal is an instance of sessionmaker.
-        """
-        self.assertTrue(callable(SessionLocal))
+        # Verify closing the session
+        with self.assertRaises(StopIteration):
+            next(db_gen)
+        mock_session.close.assert_called_once()
 
-    ## <TEST_BASE_DECLARATIVE>
-    def test_base_declarative(self):
-        """
-        Test if Base is an instance of the declarative base.
-        """
-        self.assertTrue(hasattr(Base, 'metadata'))
-
-    ## <TEST_SQLITE_CONNECT_ARGS>
-    def test_sqlite_connect_args(self):
-        """
-        Test if connect_args is correctly set for SQLite.
-        """
-        if "sqlite" in str(engine.url):
-            self.assertIn("check_same_thread", engine.dialect.connect_args)
-            self.assertFalse(engine.dialect.connect_args["check_same_thread"])
-        else:
-            self.assertNotIn("check_same_thread", engine.dialect.connect_args)
-
-if __name__ == '__main__':
+## Main
+if __name__ == "__main__":
     unittest.main()

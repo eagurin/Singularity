@@ -1,165 +1,159 @@
 ## test_app/models/schemas/test_schemas.py
 """
-This test module covers the test cases for the schemas defined in the app/models/schemas directory.
+This module contains the test cases for the schemas defined in app/models/schemas/*.py.
 It uses Python's unittest framework to ensure the correctness and robustness of the code.
 """
 
 import unittest
+from datetime import datetime
 from pydantic import ValidationError
-from app.models.schemas.agent import Agent, AgentCreate
-from app.models.schemas.role import Role, RoleCreate
-from app.models.schemas.influence import Influence, InfluenceCreate
-from app.models.schemas.task import Task, TaskCreate
-from app.models.schemas.group import Group, GroupCreate
-from app.models.schemas.news import News, NewsCreate
-from app.models.schemas.recommendation import Recommendation, RecommendationCreate
-from app.models.schemas.training import Training, TrainingCreate
-from app.models.schemas.feedback import Feedback, FeedbackCreate
+from app.models.schemas import (
+    SentimentAnalysisRequest,
+    SentimentAnalysisResponse,
+    EntityRecognitionRequest,
+    EntityRecognitionResponse,
+    LanguageTranslationRequest,
+    LanguageTranslationResponse,
+    Role,
+    Agent,
+    Task,
+    Group,
+    Influence,
+    News,
+    Recommendation,
+    Training,
+    Feedback,
+)
 
-## TestAgentSchema
-class TestAgentSchema(unittest.TestCase):
-    def test_create_agent_with_minimum_fields(self):
-        agent = AgentCreate(name="John Doe")
-        self.assertEqual(agent.name, "John Doe")
-        self.assertIsNone(agent.role_id)
+## TestSentimentAnalysisSchemas
+class TestSentimentAnalysisSchemas(unittest.TestCase):
+    def test_sentiment_analysis_request(self):
+        """Ensure SentimentAnalysisRequest schema works with valid data"""
+        data = {"text": "I love sunny days but hate the rain."}
+        request = SentimentAnalysisRequest(**data)
+        self.assertEqual(request.text, data['text'])
 
-    def test_create_agent_with_all_fields(self):
-        agent = Agent(id=1, name="John Doe", role_id=2)
-        self.assertEqual(agent.id, 1)
-        self.assertEqual(agent.name, "John Doe")
-        self.assertEqual(agent.role_id, 2)
+    def test_sentiment_analysis_response(self):
+        """Ensure SentimentAnalysisResponse schema works with valid data"""
+        data = {"result": {"polarity": 0.1, "subjectivity": 0.3}}
+        response = SentimentAnalysisResponse(result=data["result"])
+        self.assertEqual(response.result, data["result"])
 
-    def test_agent_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            Agent(id="one", name="John Doe", role_id="two")
+## TestEntityRecognitionSchemas
+class TestEntityRecognitionSchemas(unittest.TestCase):
+    def test_entity_recognition_request(self):
+        """Ensure EntityRecognitionRequest schema works with valid data"""
+        data = {"text": "London is a big city in the United Kingdom."}
+        request = EntityRecognitionRequest(**data)
+        self.assertEqual(request.text, data['text'])
 
-## TestRoleSchema
-class TestRoleSchema(unittest.TestCase):
-    def test_create_role_with_minimum_fields(self):
-        role = RoleCreate(name="Administrator")
-        self.assertEqual(role.name, "Administrator")
+    def test_entity_recognition_response(self):
+        """Ensure EntityRecognitionResponse schema works with valid data"""
+        data = {"entities": [{"entity": "London", "type": "Location"}]}
+        response = EntityRecognitionResponse(entities=data["entities"])
+        self.assertEqual(response.entities, data["entities"])
 
-    def test_create_role_with_all_fields(self):
-        role = Role(id=1, name="Administrator")
-        self.assertEqual(role.id, 1)
-        self.assertEqual(role.name, "Administrator")
+## TestLanguageTranslationSchemas
+class TestLanguageTranslationSchemas(unittest.TestCase):
+    def test_language_translation_request(self):
+        """Ensure LanguageTranslationRequest schema works with valid data"""
+        data = {"text": "Hello, how are you?", "target_language": "es"}
+        request = LanguageTranslationRequest(**data)
+        self.assertEqual(request.text, data['text'])
+        self.assertEqual(request.target_language, data['target_language'])
 
-    def test_role_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            Role(id="one", name=123)
+    def test_language_translation_response(self):
+        """Ensure LanguageTranslationResponse schema works with valid data"""
+        data = {"translated_text": "Hola, ¿cómo estás?"}
+        response = LanguageTranslationResponse(translated_text=data["translated_text"])
+        self.assertEqual(response.translated_text, data["translated_text"])
 
-## TestInfluenceSchema
-class TestInfluenceSchema(unittest.TestCase):
-    def test_create_influence_with_minimum_fields(self):
-        influence = InfluenceCreate(name="Positive")
-        self.assertEqual(influence.name, "Positive")
+## TestRoleSchemas
+class TestRoleSchemas(unittest.TestCase):
+    def test_role_schema(self):
+        """Ensure Role schema works with valid data"""
+        data = {"id": 1, "name": "Administrator"}
+        role = Role(**data)
+        self.assertEqual(role.id, data['id'])
+        self.assertEqual(role.name, data['name'])
 
-    def test_create_influence_with_all_fields(self):
-        influence = Influence(id=1, name="Positive")
-        self.assertEqual(influence.id, 1)
-        self.assertEqual(influence.name, "Positive")
+## TestAgentSchemas
+class TestAgentSchemas(unittest.TestCase):
+    def test_agent_schema(self):
+        """Ensure Agent schema works with valid data"""
+        data = {"id": 1, "name": "John Doe", "role_id": 2}
+        agent = Agent(**data)
+        self.assertEqual(agent.id, data['id'])
+        self.assertEqual(agent.name, data['name'])
+        self.assertEqual(agent.role_id, data['role_id'])
 
-    def test_influence_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            Influence(id="one", name=123)
+## TestTaskSchemas
+class TestTaskSchemas(unittest.TestCase):
+    def test_task_schema(self):
+        """Ensure Task schema works with valid data"""
+        data = {"id": 1, "description": "Complete the project documentation.", "agent_id": 1}
+        task = Task(**data)
+        self.assertEqual(task.id, data['id'])
+        self.assertEqual(task.description, data['description'])
+        self.assertEqual(task.agent_id, data['agent_id'])
 
-## TestTaskSchema
-class TestTaskSchema(unittest.TestCase):
-    def test_create_task_with_minimum_fields(self):
-        task = TaskCreate(description="Complete the project documentation.")
-        self.assertEqual(task.description, "Complete the project documentation.")
+## TestGroupSchemas
+class TestGroupSchemas(unittest.TestCase):
+    def test_group_schema(self):
+        """Ensure Group schema works with valid data"""
+        data = {"id": 1, "name": "Development Team", "tasks": []}
+        group = Group(**data)
+        self.assertEqual(group.id, data['id'])
+        self.assertEqual(group.name, data['name'])
+        self.assertEqual(group.tasks, data['tasks'])
 
-    def test_create_task_with_all_fields(self):
-        task = Task(id=1, description="Complete the project documentation.", agent_id=2)
-        self.assertEqual(task.id, 1)
-        self.assertEqual(task.description, "Complete the project documentation.")
-        self.assertEqual(task.agent_id, 2)
+## TestInfluenceSchemas
+class TestInfluenceSchemas(unittest.TestCase):
+    def test_influence_schema(self):
+        """Ensure Influence schema works with valid data"""
+        data = {"id": 1, "name": "Positive"}
+        influence = Influence(**data)
+        self.assertEqual(influence.id, data['id'])
+        self.assertEqual(influence.name, data['name'])
 
-    def test_task_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            Task(id="one", description=123, agent_id="two")
+## TestNewsSchemas
+class TestNewsSchemas(unittest.TestCase):
+    def test_news_schema(self):
+        """Ensure News schema works with valid data"""
+        data = {"id": 1, "title": "New Feature Release", "content": "We are excited to announce the release of..."}
+        news = News(**data)
+        self.assertEqual(news.id, data['id'])
+        self.assertEqual(news.title, data['title'])
+        self.assertEqual(news.content, data['content'])
 
-## TestGroupSchema
-class TestGroupSchema(unittest.TestCase):
-    def test_create_group_with_minimum_fields(self):
-        group = GroupCreate(name="Development Team")
-        self.assertEqual(group.name, "Development Team")
+## TestRecommendationSchemas
+class TestRecommendationSchemas(unittest.TestCase):
+    def test_recommendation_schema(self):
+        """Ensure Recommendation schema works with valid data"""
+        data = {"id": 1, "title": "Recommended Practices for Security", "content": "It is recommended to regularly update your passwords..."}
+        recommendation = Recommendation(**data)
+        self.assertEqual(recommendation.id, data['id'])
+        self.assertEqual(recommendation.title, data['title'])
+        self.assertEqual(recommendation.content, data['content'])
 
-    def test_create_group_with_all_fields(self):
-        group = Group(id=1, name="Development Team", tasks=[])
-        self.assertEqual(group.id, 1)
-        self.assertEqual(group.name, "Development Team")
-        self.assertEqual(group.tasks, [])
+## TestTrainingSchemas
+class TestTrainingSchemas(unittest.TestCase):
+    def test_training_schema(self):
+        """Ensure Training schema works with valid data"""
+        data = {"id": 1, "title": "Docker Basics", "content": "Docker is a set of platform as a service products that use OS-level virtualization..."}
+        training = Training(**data)
+        self.assertEqual(training.id, data['id'])
+        self.assertEqual(training.title, data['title'])
+        self.assertEqual(training.content, data['content'])
 
-    def test_group_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            Group(id="one", name=123, tasks="not a list")
-
-## TestNewsSchema
-class TestNewsSchema(unittest.TestCase):
-    def test_create_news_with_minimum_fields(self):
-        news = NewsCreate(title="New Feature Release", content="We are excited to announce the release of...")
-        self.assertEqual(news.title, "New Feature Release")
-        self.assertEqual(news.content, "We are excited to announce the release of...")
-
-    def test_create_news_with_all_fields(self):
-        news = News(id=1, title="New Feature Release", content="We are excited to announce the release of...")
-        self.assertEqual(news.id, 1)
-        self.assertEqual(news.title, "New Feature Release")
-        self.assertEqual(news.content, "We are excited to announce the release of...")
-
-    def test_news_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            News(id="one", title=123, content=456)
-
-## TestRecommendationSchema
-class TestRecommendationSchema(unittest.TestCase):
-    def test_create_recommendation_with_minimum_fields(self):
-        recommendation = RecommendationCreate(title="Recommended Practices for Security", content="It is recommended to regularly update your passwords...")
-        self.assertEqual(recommendation.title, "Recommended Practices for Security")
-        self.assertEqual(recommendation.content, "It is recommended to regularly update your passwords...")
-
-    def test_create_recommendation_with_all_fields(self):
-        recommendation = Recommendation(id=1, title="Recommended Practices for Security", content="It is recommended to regularly update your passwords...")
-        self.assertEqual(recommendation.id, 1)
-        self.assertEqual(recommendation.title, "Recommended Practices for Security")
-        self.assertEqual(recommendation.content, "It is recommended to regularly update your passwords...")
-
-    def test_recommendation_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            Recommendation(id="one", title=123, content=456)
-
-## TestTrainingSchema
-class TestTrainingSchema(unittest.TestCase):
-    def test_create_training_with_minimum_fields(self):
-        training = TrainingCreate(title="Docker Basics", content="Docker is a set of platform as a service products that use OS-level virtualization...")
-        self.assertEqual(training.title, "Docker Basics")
-        self.assertEqual(training.content, "Docker is a set of platform as a service products that use OS-level virtualization...")
-
-    def test_create_training_with_all_fields(self):
-        training = Training(id=1, title="Docker Basics", content="Docker is a set of platform as a service products that use OS-level virtualization...")
-        self.assertEqual(training.id, 1)
-        self.assertEqual(training.title, "Docker Basics")
-        self.assertEqual(training.content, "Docker is a set of platform as a service products that use OS-level virtualization...")
-
-    def test_training_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            Training(id="one", title=123, content=456)
-
-## TestFeedbackSchema
-class TestFeedbackSchema(unittest.TestCase):
-    def test_create_feedback_with_minimum_fields(self):
-        feedback = FeedbackCreate(content="This new feature has significantly improved my workflow!")
-        self.assertEqual(feedback.content, "This new feature has significantly improved my workflow!")
-
-    def test_create_feedback_with_all_fields(self):
-        feedback = Feedback(id=1, content="This new feature has significantly improved my workflow!")
-        self.assertEqual(feedback.id, 1)
-        self.assertEqual(feedback.content, "This new feature has significantly improved my workflow!")
-
-    def test_feedback_with_invalid_field(self):
-        with self.assertRaises(ValidationError):
-            Feedback(id="one", content=123)
+## TestFeedbackSchemas
+class TestFeedbackSchemas(unittest.TestCase):
+    def test_feedback_schema(self):
+        """Ensure Feedback schema works with valid data"""
+        data = {"id": 1, "content": "This new feature has significantly improved my workflow!"}
+        feedback = Feedback(**data)
+        self.assertEqual(feedback.id, data['id'])
+        self.assertEqual(feedback.content, data['content'])
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,57 +1,35 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List
 from sqlalchemy.orm import Session
-from app.models.schemas.agent import AgentCreate, Agent
-from app.services.agent_service import AgentService
+from typing import List
+
+# Importing NLP related schemas and services
+from app.models.schemas.nlp import SentimentAnalysisRequest, SentimentAnalysisResponse, EntityRecognitionRequest, EntityRecognitionResponse, LanguageTranslationRequest, LanguageTranslationResponse
+from app.services.nlp_service import NLPService
+
 from app.core.dependencies import get_db
 
 router = APIRouter()
 
-@router.post("/", response_model=Agent, status_code=201)
-def create_agent(agent: AgentCreate, db: Session = Depends(get_db)):
+@router.post("/sentiment_analysis", response_model=SentimentAnalysisResponse)
+def perform_sentiment_analysis(request: SentimentAnalysisRequest, db: Session = Depends(get_db)):
     """
-    Create a new agent and save it to the database.
+    Perform sentiment analysis on the provided text.
     """
-    agent_service = AgentService(db)
-    return agent_service.create_agent(agent)
+    nlp_service = NLPService(db)
+    return nlp_service.analyze_sentiment(request.text)
 
-@router.get("/", response_model=List[Agent])
-def read_agents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+@router.post("/entity_recognition", response_model=EntityRecognitionResponse)
+def perform_entity_recognition(request: EntityRecognitionRequest, db: Session = Depends(get_db)):
     """
-    Retrieve agents from the database.
+    Perform entity recognition on the provided text.
     """
-    agent_service = AgentService(db)
-    return agent_service.get_agents(skip=skip, limit=limit)
+    nlp_service = NLPService(db)
+    return nlp_service.recognize_entities(request.text)
 
-@router.get("/{agent_id}", response_model=Agent)
-def read_agent(agent_id: int, db: Session = Depends(get_db)):
+@router.post("/language_translation", response_model=LanguageTranslationResponse)
+def perform_language_translation(request: LanguageTranslationRequest, db: Session = Depends(get_db)):
     """
-    Retrieve a single agent by ID.
+    Translate the provided text to the target language.
     """
-    agent_service = AgentService(db)
-    db_agent = agent_service.get_agent(agent_id)
-    if db_agent is None:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return db_agent
-
-@router.put("/{agent_id}", response_model=Agent)
-def update_agent(agent_id: int, agent: AgentCreate, db: Session = Depends(get_db)):
-    """
-    Update an agent's information.
-    """
-    agent_service = AgentService(db)
-    updated_agent = agent_service.update_agent(agent_id, agent)
-    if updated_agent is None:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return updated_agent
-
-@router.delete("/{agent_id}", response_model=Agent)
-def delete_agent(agent_id: int, db: Session = Depends(get_db)):
-    """
-    Delete an agent from the database.
-    """
-    agent_service = AgentService(db)
-    deleted_agent = agent_service.delete_agent(agent_id)
-    if deleted_agent is None:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return deleted_agent
+    nlp_service = NLPService(db)
+    return nlp_service.translate_text(request.text, request.target_language)

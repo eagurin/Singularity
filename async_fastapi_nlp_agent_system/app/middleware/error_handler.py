@@ -3,6 +3,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
+from transformers import TranslationPipeline
 import logging
 
 def setup_error_handlers(app):
@@ -36,6 +37,17 @@ def setup_error_handlers(app):
         return JSONResponse(
             status_code=500,
             content={"detail": "An internal server error occurred"}
+        )
+
+    @app.exception_handler(TranslationPipeline)
+    async def translation_pipeline_exception_handler(request: Request, exc: TranslationPipeline):
+        """
+        Handles errors from the TranslationPipeline, logging the error and returning a specific error response.
+        """
+        logging.error(f"Translation pipeline error occurred: {exc}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "A translation error occurred"}
         )
 
     @app.exception_handler(Exception)

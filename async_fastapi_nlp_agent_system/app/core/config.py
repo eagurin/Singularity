@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field(default="sqlite:///./sql_app.db", env="DATABASE_URL")
     TEST_DATABASE_URL: str = Field(default="sqlite:///./test_sql_app.db", env="TEST_DATABASE_URL")
     SPACY_MODEL: str = Field(default="en_core_web_sm", env="SPACY_MODEL")
+    REDIS_URL: str = Field(default="redis://localhost:6379", env="REDIS_URL")
+    RABBITMQ_URL: str = Field(default="amqp://user:password@localhost", env="RABBITMQ_URL")
 
     class Config:
         env_file = ".env"

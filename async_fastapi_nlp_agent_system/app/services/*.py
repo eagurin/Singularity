@@ -1,72 +1,57 @@
-## app/services/agent_service.py
+## app/services/nlp_service.py
 import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from app.models.database.agent import Agent as DBAgent
-from app.models.schemas.agent import AgentCreate, Agent as SchemaAgent
+from app.models.schemas.nlp import SentimentAnalysisRequest, SentimentAnalysisResponse, EntityRecognitionRequest, EntityRecognitionResponse, LanguageTranslationRequest, LanguageTranslationResponse
+from transformers import pipeline, PipelineException
 
-class AgentService:
+class NLPService:
     def __init__(self, db: Session):
-        self.db = db
+        self.db = db  # Placeholder for future database interactions
 
-    def create_agent(self, agent: AgentCreate) -> SchemaAgent:
+    def analyze_sentiment(self, text: str) -> SentimentAnalysisResponse:
         """
-        Create a new agent and save it to the database.
+        Analyze the sentiment of the provided text.
         """
-        db_agent = DBAgent(name=agent.name, role_id=agent.role_id)
         try:
-            self.db.add(db_agent)
-            self.db.commit()
-            self.db.refresh(db_agent)
-            return db_agent
-        except SQLAlchemyError as e:
-            self.db.rollback()
-            logging.error(f"Failed to create agent: {e}")
-            raise
+            sentiment_pipeline = pipeline("sentiment-analysis")
+            result = sentiment_pipeline(text)
+            return SentimentAnalysisResponse(result=result)
+        except PipelineException as e:
+            logging.error(f"Sentiment analysis pipeline error: {e}")
+            raise ValueError("Failed to analyze sentiment due to a pipeline error.")
+        except Exception as e:
+            logging.error(f"Unexpected error during sentiment analysis: {e}")
+            raise ValueError("Failed to analyze sentiment due to an unexpected error.")
 
-    def get_agents(self, skip: int = 0, limit: int = 100) -> List[SchemaAgent]:
+    def recognize_entities(self, text: str) -> EntityRecognitionResponse:
         """
-        Retrieve agents from the database.
+        Recognize entities in the provided text.
         """
-        return self.db.query(DBAgent).offset(skip).limit(limit).all()
-
-    def get_agent(self, agent_id: int) -> Optional[SchemaAgent]:
-        """
-        Retrieve a single agent by ID.
-        """
-        return self.db.query(DBAgent).filter(DBAgent.id == agent_id).first()
-
-    def update_agent(self, agent_id: int, agent: AgentCreate) -> Optional[SchemaAgent]:
-        """
-        Update an agent's information.
-        """
-        db_agent = self.db.query(DBAgent).filter(DBAgent.id == agent_id).first()
-        if db_agent is None:
-            return None
-        db_agent.name = agent.name
-        db_agent.role_id = agent.role_id
         try:
-            self.db.commit()
-            self.db.refresh(db_agent)
-            return db_agent
-        except SQLAlchemyError as e:
-            self.db.rollback()
-            logging.error(f"Failed to update agent {agent_id}: {e}")
-            raise
+            ner_pipeline = pipeline("ner", grouped_entities=True)
+            entities = ner_pipeline(text)
+            return EntityRecognitionResponse(entities=entities)
+        except PipelineException as e:
+            logging.error(f"Entity recognition pipeline error: {e}")
+            raise ValueError("Failed to recognize entities due to a pipeline error.")
+        except Exception as e:
+            logging.error(f"Unexpected error during entity recognition: {e}")
+            raise ValueError("Failed to recognize entities due to an unexpected error.")
 
-    def delete_agent(self, agent_id: int) -> Optional[SchemaAgent]:
+    def translate_text(self, text: str, target_language: str, source_language: str = "en") -> LanguageTranslationResponse:
         """
-        Delete an agent from the database.
+        Translate the provided text from the source language to the target language.
+        Assumes the source language is English ('en') if not specified.
         """
-        db_agent = self.db.query(DBAgent).filter(DBAgent.id == agent_id).first()
-        if db_agent is None:
-            return None
         try:
-            self.db.delete(db_agent)
-            self.db.commit()
-            return db_agent
-        except SQLAlchemyError as e:
-            self.db.rollback()
-            logging.error(f"Failed to delete agent {agent_id}: {e}")
-            raise
+            translation_pipeline = pipeline("translation", model=f"Helsinki-NLP/opus-mt-{source_language}-{target_language}")
+            translated_text = translation_pipeline(text, max_length=40)[0]['translation_text']
+            return LanguageTranslationResponse(translated_text=translated_text)
+        except PipelineException as e:
+            logging.error(f"Translation pipeline error: {e}")
+            raise ValueError("Failed to translate text due to a pipeline error.")
+        except Exception as e:
+            logging.error(f"Unexpected error during text translation: {e}")
+            raise ValueError("Failed to translate text due to an unexpected error.")

@@ -1,96 +1,74 @@
-"""
 ## IMPORTS
-"""
 import unittest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
-"""
-## SETUP MOCKS AND FIXTURES
-"""
-def get_test_db() -> sessionmaker:
-    """
-    Mock database session for testing.
-    """
-    db = MagicMock()
-    try:
-        yield db
-    finally:
-        db.close()
+## SETUP
+# Mocking the settings to use in the app creation
+mock_settings = MagicMock()
+mock_settings.PROJECT_NAME = "Test Project"
+mock_settings.PROJECT_VERSION = "1.0"
 
-@patch('app.main.create_app')  # Correcting the path according to the provided legacy code
-@patch('app.db.session.SessionLocal', side_effect=get_test_db)
-@patch('app.db.session.engine', MagicMock())
-class TestApp(unittest.TestCase):
-    """
-    ## SETUP
-    """
+# Mocking the database session and engine
+mock_engine = MagicMock()
+mock_SessionLocal = MagicMock(return_value=MagicMock(spec=sessionmaker))
+
+## MOCK PATCHES
+@patch("app.__init__.settings", mock_settings)
+@patch("app.__init__.SessionLocal", mock_SessionLocal)
+@patch("app.__init__.engine", mock_engine)
+@patch("app.__init__.Base")
+def setup_app(BaseMock):
+    from app.__init__ import create_app
+    app = create_app()
+    return app
+
+## TEST CASES
+class TestFastAPIApp(unittest.TestCase):
     def setUp(self):
-        """
-        Setup before each test case.
-        """
-        self.client = TestClient(create_app())
+        self.app = setup_app()
+        self.client = TestClient(self.app)
 
-    """
-    ## TEST CASES
-    """
-    ## Test FastAPI app creation
-    def test_create_app(self, mock_engine, mock_session_local, mock_create_app):
-        """
-        Test if the FastAPI app is created with the correct attributes.
-        """
-        app = create_app()
-        self.assertEqual(app.title, settings.PROJECT_NAME)  # Using settings for dynamic project name
-        self.assertEqual(app.version, settings.PROJECT_VERSION)  # Using settings for dynamic project version
+    ## <SECTION_NAME>: Test app creation
+    def test_app_creation(self):
+        """Test if the FastAPI app is created successfully."""
+        self.assertIsNotNone(self.app)
+        self.assertEqual(self.app.title, "Test Project")
+        self.assertEqual(self.app.version, "1.0")
 
-    ## Test database session creation
-    def test_get_db(self, mock_engine, mock_session_local, mock_create_app):
-        """
-        Test if the database session is created and closed properly.
-        """
-        with get_test_db() as db:
-            self.assertIsNotNone(db)
-            db.close.assert_called_once()
+    ## <SECTION_NAME>: Test database session dependency
+    def test_db_session_dependency(self):
+        """Test if the database session dependency yields a session and closes it."""
+        with patch("app.__init__.SessionLocal") as MockSession:
+            db_session = next(self.app.dependency_overrides[self.app.router.routes[0].dependencies[0].dependency])
+            MockSession.assert_called_once()
+            self.assertTrue(MockSession.return_value.close.called)
 
-    ## Test startup event
-    @patch('app.models.agent.Base.metadata.create_all')
-    @patch('app.models.role.Base.metadata.create_all')
-    def test_startup_event(self, mock_create_all_agent, mock_create_all_role, mock_engine, mock_session_local, mock_create_app):
-        """
-        Test if the startup event creates the database tables correctly.
-        """
-        with TestClient(create_app()) as client:
-            mock_create_all_agent.assert_called_once_with(bind=mock_engine)
-            mock_create_all_role.assert_called_once_with(bind=mock_engine)
+    ## <SECTION_NAME>: Test startup event
+    def test_startup_event(self):
+        """Test if the startup event creates database tables."""
+        with patch("app.__init__.Base.metadata.create_all") as mock_create_all:
+            self.app.router.on_startup[0]()
+            mock_create_all.assert_called_once_with(bind=mock_engine)
 
-    ## Test shutdown event
-    def test_shutdown_event(self, mock_engine, mock_session_local, mock_create_app):
-        """
-        Test if the shutdown event logic is executed.
-        """
-        # Since the shutdown logic is empty, we just check if the app can be shut down without errors.
-        with TestClient(create_app()) as client:
-            pass  # No specific action needed, just ensuring no exceptions are raised.
+    ## <SECTION_NAME>: Test shutdown event
+    def test_shutdown_event(self):
+        """Test if the shutdown event logic is callable and executes without error."""
+        try:
+            self.app.router.on_shutdown[0]()
+        except Exception as e:
+            self.fail(f"Shutdown event raised an exception {e}")
 
-    ## Test API endpoints registration
-    def test_api_endpoints_registration(self, mock_engine, mock_session_local, mock_create_app):
-        """
-        Test if all API endpoints are registered correctly with their respective tags.
-        """
-        app = create_app()
-        routes = [route.path for route in app.routes]
-        expected_routes = [
-            "/api/v1/agents", "/api/v1/roles", "/api/v1/influences",
-            "/api/v1/stages", "/api/v1/groups", "/api/v1/tasks",
-            "/api/v1/news", "/api/v1/recommendations", "/api/v1/training",
-            "/api/v1/feedback"
-        ]
-        for route in expected_routes:
-            self.assertIn(route, routes)
+    ## <SECTION_NAME>: Test endpoint inclusion
+    def test_endpoint_inclusion(self):
+        """Test if all expected endpoints are included in the app."""
+        expected_tags = {"agents", "roles", "influences", "stages", "groups", "tasks", "news", "recommendations", "training", "feedback", "NLP"}
+        included_tags = set()
+        for route in self.app.routes:
+            if hasattr(route, "tags"):
+                included_tags.update(route.tags)
+        self.assertEqual(expected_tags, included_tags)
 
-"""
-## MAIN
-"""
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

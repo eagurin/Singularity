@@ -1,4 +1,4 @@
-## tests/api/test_agents.py
+## tests/api/test_nlp_features.py
 import pytest
 from httpx import AsyncClient
 from fastapi import FastAPI
@@ -15,7 +15,8 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture
 async def async_app() -> FastAPI:
-    from app.main import app  # Import the FastAPI app
+    from app.main import create_app  # Import the FastAPI app creation function
+    app = create_app()
     async with engine.begin() as conn:
         # Create test tables
         await conn.run_sync(DBAgent.metadata.create_all)
@@ -43,51 +44,25 @@ async def transactional_db(session: AsyncSession):
         await session.rollback()
 
 @pytest.mark.asyncio
-async def test_create_agent(client: AsyncClient):
-    response = await client.post("/api/v1/agents/", json={"name": "Test Agent", "role_id": 1})
-    assert response.status_code == 201
-    data = response.json()
-    assert data["name"] == "Test Agent"
-    assert "id" in data
-
-@pytest.mark.asyncio
-async def test_read_agent(client: AsyncClient, session: AsyncSession):
-    # Pre-insert an agent into the test database
-    test_agent = DBAgent(name="Read Agent", role_id=2)
-    session.add(test_agent)
-    await session.commit()
-
-    response = await client.get(f"/api/v1/agents/{test_agent.id}")
+async def test_perform_sentiment_analysis(client: AsyncClient):
+    response = await client.post("/api/v1/nlp/sentiment_analysis", json={"text": "I love sunny days but hate the rain."})
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "Read Agent"
-    assert data["id"] == test_agent.id
+    assert "result" in data
+    assert isinstance(data["result"], (list, dict))
 
 @pytest.mark.asyncio
-async def test_update_agent(client: AsyncClient, session: AsyncSession):
-    # Pre-insert an agent to update
-    test_agent = DBAgent(name="Update Agent", role_id=3)
-    session.add(test_agent)
-    await session.commit()
-
-    response = await client.put(f"/api/v1/agents/{test_agent.id}", json={"name": "Updated Agent", "role_id": 3})
+async def test_perform_entity_recognition(client: AsyncClient):
+    response = await client.post("/api/v1/nlp/entity_recognition", json={"text": "London is a big city in the United Kingdom."})
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "Updated Agent"
-    assert data["id"] == test_agent.id
+    assert "entities" in data
+    assert isinstance(data["entities"], list)
 
 @pytest.mark.asyncio
-async def test_delete_agent(client: AsyncClient, session: AsyncSession):
-    # Pre-insert an agent to delete
-    test_agent = DBAgent(name="Delete Agent", role_id=4)
-    session.add(test_agent)
-    await session.commit()
-
-    response = await client.delete(f"/api/v1/agents/{test_agent.id}")
+async def test_perform_language_translation(client: AsyncClient):
+    response = await client.post("/api/v1/nlp/language_translation", json={"text": "Hello, how are you?", "target_language": "es"})
     assert response.status_code == 200
     data = response.json()
-    assert data["id"] == test_agent.id
-
-    # Verify the agent is deleted
-    db_agent = await session.get(DBAgent, test_agent.id)
-    assert db_agent is None
+    assert "translated_text" in data
+    assert isinstance(data["translated_text"], str)

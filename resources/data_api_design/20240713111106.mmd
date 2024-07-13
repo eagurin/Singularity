@@ -24,9 +24,25 @@ classDiagram
         +model_id int
         +model_data string
     }
+    class SentimentAnalysis {
+        +analyze_text(text: string) string
+    }
+    class EntityRecognition {
+        +recognize_entities(text: string) list
+    }
+    class LanguageTranslation {
+        +translate_text(text: string, target_language: string) string
+    }
+    class AdvancedNLPFeatures {
+        +perform_advanced_analysis(text: string) string
+    }
     FastAPIApp --> Router : uses
     Router --> Endpoint : routes
     Endpoint --> Service : calls
     Service --> Database : uses
     Database --> Model : stores
     Model --> Schema : validates
+    Endpoint --> SentimentAnalysis : uses
+    Endpoint --> EntityRecognition : uses
+    Endpoint --> LanguageTranslation : uses
+    Endpoint --> AdvancedNLPFeatures : uses

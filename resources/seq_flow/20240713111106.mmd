@@ -6,9 +6,26 @@ sequenceDiagram
     participant Endpoint as Endpoint
     participant Service as Service
     participant Database as Database
+    participant SA as SentimentAnalysis
+    participant ER as EntityRecognition
+    participant LT as LanguageTranslation
+    participant ANF as AdvancedNLPFeatures
     User->>FastAPIApp: Request(API Call)
     FastAPIApp->>Router: Determine Route
     Router->>Endpoint: Route to Endpoint
+    alt Sentiment Analysis
+        Endpoint->>SA: Analyze Text
+        SA-->>Endpoint: Return Analysis
+    else Entity Recognition
+        Endpoint->>ER: Recognize Entities
+        ER-->>Endpoint: Return Entities
+    else Language Translation
+        Endpoint->>LT: Translate Text
+        LT-->>Endpoint: Return Translation
+    else Advanced NLP Features
+        Endpoint->>ANF: Perform Advanced Analysis
+        ANF-->>Endpoint: Return Analysis Results
+    end
     Endpoint->>Service: Call Service Logic
     Service->>Database: Query Database
     Database-->>Service: Return Results

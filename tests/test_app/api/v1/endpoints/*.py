@@ -1,145 +1,86 @@
-"""
 ## IMPORTS
-"""
-import pytest
-
-# Attempt to import TestClient from fastapi.testclient, handling the potential ImportError
-try:
-    from fastapi.testclient import TestClient
-except ImportError as e:
-    raise ImportError("It seems like 'fastapi' is not installed. Please ensure to install 'fastapi' to run tests.") from e
-
+import sys
+sys.path.append('/data')
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from unittest import TestCase, main
 from app.main import app
 from app.core.config import settings
-from app.database.base import Base
+from app.database.base_class import Base
 
-"""
 ## SETUP
-"""
-@pytest.fixture(scope="module")
-def test_client():
-    """
-    Setup of the test client.
-    """
-    # Setup of the test client with handling for potential configuration issues
-    try:
-        engine = create_engine(settings.SQLALCHEMY_DATABASE_URI)
-    except AttributeError as e:
-        raise AttributeError("Database URI is not configured properly in settings.") from e
+# Configure the test database and session
+TEST_DATABASE_URL = "sqlite:///./test_db.db"
+engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)
-    _db = TestingSessionLocal()
+# Create a TestClient using the FastAPI app
+client = TestClient(app)
+
+def override_get_db():
     try:
-        client = TestClient(app)
-        yield client
+        db = TestingSessionLocal()
+        yield db
     finally:
-        _db.close()
-        Base.metadata.drop_all(bind=engine)
+        db.close()
 
-"""
-## CREATE_AGENT
-"""
-def test_create_agent(test_client):
-    """
-    Test creating a new agent.
-    """
-    response = test_client.post(
-        "/",
-        json={"name": "Test Agent", "status": "active"}
-    )
-    assert response.status_code == 201
-    assert response.json()["name"] == "Test Agent"
-    assert response.json()["status"] == "active"
+app.dependency_overrides[get_db] = override_get_db
 
-"""
-## READ_AGENTS
-"""
-def test_read_agents(test_client):
-    """
-    Test reading list of agents.
-    """
-    response = test_client.get("/")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+## PREPARE DATABASE
+Base.metadata.create_all(bind=engine)
 
-"""
-## READ_AGENT
-"""
-def test_read_agent_not_found(test_client):
-    """
-    Test reading a non-existing agent.
-    """
-    response = test_client.get("/999")
-    assert response.status_code == 404
+## TEST CASES
+class TestNLPAPI(TestCase):
+    ## SENTIMENT_ANALYSIS
+    def test_perform_sentiment_analysis(self):
+        request_data = {"text": "I love sunny days!"}
+        response = client.post("/sentiment_analysis", json=request_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("sentiment", response.json())
+        self.assertIn(response.json()["sentiment"], ["positive", "neutral", "negative"])
 
-def test_read_agent(test_client):
-    """
-    Test reading an existing agent.
-    """
-    # First, create an agent to read
-    create_response = test_client.post(
-        "/",
-        json={"name": "Existing Agent", "status": "active"}
-    )
-    agent_id = create_response.json()["id"]
-    read_response = test_client.get(f"/{agent_id}")
-    assert read_response.status_code == 200
-    assert read_response.json()["name"] == "Existing Agent"
+    ## ENTITY_RECOGNITION
+    def test_perform_entity_recognition(self):
+        request_data = {"text": "Google was founded in September 1998 by Larry Page and Sergey Brin."}
+        response = client.post("/entity_recognition", json=request_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("entities", response.json())
+        self.assertIsInstance(response.json()["entities"], list)
+        self.assertGreater(len(response.json()["entities"]), 0)  # Expecting at least one entity
 
-"""
-## UPDATE_AGENT
-"""
-def test_update_agent_not_found(test_client):
-    """
-    Test updating a non-existing agent.
-    """
-    response = test_client.put(
-        "/999",
-        json={"name": "Non-existing Agent", "status": "inactive"}
-    )
-    assert response.status_code == 404
+    ## LANGUAGE_TRANSLATION
+    def test_perform_language_translation(self):
+        request_data = {"text": "Hello, world!", "target_language": "es"}
+        response = client.post("/language_translation", json=request_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("translated_text", response.json())
+        self.assertNotEqual(response.json()["translated_text"], "")
 
-def test_update_agent(test_client):
-    """
-    Test updating an existing agent.
-    """
-    # First, create an agent to update
-    create_response = test_client.post(
-        "/",
-        json={"name": "Agent to Update", "status": "active"}
-    )
-    agent_id = create_response.json()["id"]
-    update_response = test_client.put(
-        f"/{agent_id}",
-        json={"name": "Updated Agent", "status": "inactive"}
-    )
-    assert update_response.status_code == 200
-    assert update_response.json()["name"] == "Updated Agent"
-    assert update_response.json()["status"] == "inactive"
+    ## EDGE_CASES
+    def test_sentiment_analysis_empty_text(self):
+        request_data = {"text": ""}
+        response = client.post("/sentiment_analysis", json=request_data)
+        self.assertNotEqual(response.status_code, 200)
 
-"""
-## DELETE_AGENT
-"""
-def test_delete_agent_not_found(test_client):
-    """
-    Test deleting a non-existing agent.
-    """
-    response = test_client.delete("/999")
-    assert response.status_code == 404
+    def test_entity_recognition_empty_text(self):
+        request_data = {"text": ""}
+        response = client.post("/entity_recognition", json=request_data)
+        self.assertNotEqual(response.status_code, 200)
 
-def test_delete_agent(test_client):
-    """
-    Test deleting an existing agent.
-    """
-    # First, create an agent to delete
-    create_response = test_client.post(
-        "/",
-        json={"name": "Agent to Delete", "status": "active"}
-    )
-    agent_id = create_response.json()["id"]
-    delete_response = test_client.delete(f"/{agent_id}")
-    assert delete_response.status_code == 200
-    assert delete_response.json()["name"] == "Agent to Delete"
+    def test_language_translation_empty_text(self):
+        request_data = {"text": "", "target_language": "es"}
+        response = client.post("/language_translation", json=request_data)
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_language_translation_unsupported_language(self):
+        request_data = {"text": "Hello, world!", "target_language": "xx"}
+        response = client.post("/language_translation", json=request_data)
+        self.assertNotEqual(response.status_code, 200)
+
+## CLEANUP
+def tearDownModule():
+    Base.metadata.drop_all(bind=engine)
+
+if __name__ == "__main__":
+    main()

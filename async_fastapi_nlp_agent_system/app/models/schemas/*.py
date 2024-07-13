@@ -1,7 +1,39 @@
-## app/models/schemas/agent.py
+## app/models/schemas/*.py
 from pydantic import BaseModel, Field
-from typing import Optional, List
-from .role import Role
+from typing import Optional, List, Union
+from datetime import datetime
+
+# New NLP related schemas
+class SentimentAnalysisRequest(BaseModel):
+    text: str = Field(..., example="I love sunny days but hate the rain.")
+
+class SentimentAnalysisResponse(BaseModel):
+    result: Union[List[dict], dict]
+
+class EntityRecognitionRequest(BaseModel):
+    text: str = Field(..., example="London is a big city in the United Kingdom.")
+
+class EntityRecognitionResponse(BaseModel):
+    entities: List[dict]
+
+class LanguageTranslationRequest(BaseModel):
+    text: str = Field(..., example="Hello, how are you?")
+    target_language: str = Field(..., example="es")
+
+class LanguageTranslationResponse(BaseModel):
+    translated_text: str
+
+# Existing schemas
+class RoleBase(BaseModel):
+    name: str = Field(..., example="Administrator")
+
+class RoleCreate(RoleBase):
+    pass
+
+class Role(RoleBase):
+    id: int
+    class Config:
+        orm_mode = True
 
 class AgentBase(BaseModel):
     name: str = Field(..., example="John Doe")
@@ -16,31 +48,6 @@ class Agent(AgentBase):
     class Config:
         orm_mode = True
 
-## app/models/schemas/role.py
-class RoleBase(BaseModel):
-    name: str = Field(..., example="Administrator")
-
-class RoleCreate(RoleBase):
-    pass
-
-class Role(RoleBase):
-    id: int
-    class Config:
-        orm_mode = True
-
-## app/models/schemas/influence.py
-class InfluenceBase(BaseModel):
-    name: str = Field(..., example="Positive")
-
-class InfluenceCreate(InfluenceBase):
-    pass
-
-class Influence(InfluenceBase):
-    id: int
-    class Config:
-        orm_mode = True
-
-## app/models/schemas/task.py
 class TaskBase(BaseModel):
     description: str = Field(..., example="Complete the project documentation.")
 
@@ -52,9 +59,6 @@ class Task(TaskBase):
     agent_id: Optional[int] = None
     class Config:
         orm_mode = True
-
-## app/models/schemas/group.py
-from .task import Task
 
 class GroupBase(BaseModel):
     name: str = Field(..., example="Development Team")
@@ -68,7 +72,17 @@ class Group(GroupBase):
     class Config:
         orm_mode = True
 
-## app/models/schemas/news.py
+class InfluenceBase(BaseModel):
+    name: str = Field(..., example="Positive")
+
+class InfluenceCreate(InfluenceBase):
+    pass
+
+class Influence(InfluenceBase):
+    id: int
+    class Config:
+        orm_mode = True
+
 class NewsBase(BaseModel):
     title: str = Field(..., example="New Feature Release")
     content: str = Field(..., example="We are excited to announce the release of...")
@@ -81,7 +95,6 @@ class News(NewsBase):
     class Config:
         orm_mode = True
 
-## app/models/schemas/recommendation.py
 class RecommendationBase(BaseModel):
     title: str = Field(..., example="Recommended Practices for Security")
     content: str = Field(..., example="It is recommended to regularly update your passwords...")
@@ -94,7 +107,6 @@ class Recommendation(RecommendationBase):
     class Config:
         orm_mode = True
 
-## app/models/schemas/training.py
 class TrainingBase(BaseModel):
     title: str = Field(..., example="Docker Basics")
     content: str = Field(..., example="Docker is a set of platform as a service products that use OS-level virtualization...")
@@ -107,7 +119,6 @@ class Training(TrainingBase):
     class Config:
         orm_mode = True
 
-## app/models/schemas/feedback.py
 class FeedbackBase(BaseModel):
     content: str = Field(..., example="This new feature has significantly improved my workflow!")
 

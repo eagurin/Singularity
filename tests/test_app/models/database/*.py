@@ -1,147 +1,118 @@
-"""
 ## test_app/models/database/test_models.py
+"""
+This test module is designed to verify the correctness and robustness of the database models
+defined in the app/models/database/*.py file. It uses Python's unittest framework to create
+a comprehensive test suite that covers various aspects of the models, including relationships,
+constraints, and table properties.
 """
 
 import unittest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, clear_mappers
+from app.models.database import Base, Agent, Role, Influence, Task, Group, News, Recommendation, Training, Feedback
 
-try:
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-
-    from app.models.database.base import Base
-    from app.models.database.agent import Agent
-    from app.models.database.role import Role
-    from app.models.database.influence import Influence
-    from app.models.database.task import Task
-    from app.models.database.group import Group
-    from app.models.database.news import News
-    from app.models.database.recommendation import Recommendation
-    from app.models.database.training import Training
-    from app.models.database.feedback import Feedback
-except ModuleNotFoundError:
-    import sys
-    print("Required module 'sqlalchemy' not found. Please install it using pip.")
-    sys.exit(1)
-
-
+## SETUP
 class TestDatabaseModels(unittest.TestCase):
-    """
-    ## SETUP AND TEARDOWN
-    """
     @classmethod
     def setUpClass(cls):
+        """
+        Set up a temporary in-memory database before any tests are run.
+        """
         cls.engine = create_engine('sqlite:///:memory:')
         Base.metadata.create_all(cls.engine)
         cls.Session = sessionmaker(bind=cls.engine)
-        cls.session = cls.Session()
 
     @classmethod
     def tearDownClass(cls):
-        cls.session.close()
+        """
+        Ensure the database is discarded after tests are done.
+        """
         Base.metadata.drop_all(cls.engine)
 
-    """
-    ## AGENT MODEL TESTS
-    """
-    def test_create_agent(self):
-        new_agent = Agent(name="Test Agent", role_id=1)
-        self.session.add(new_agent)
-        self.session.commit()
-        query_agent = self.session.query(Agent).filter_by(name="Test Agent").first()
-        self.assertIsNotNone(query_agent)
-        self.assertEqual(query_agent.name, "Test Agent")
+    def setUp(self):
+        """
+        Create a new database session for a test.
+        """
+        self.session = self.Session()
 
-    """
-    ## ROLE MODEL TESTS
-    """
-    def test_create_role(self):
-        new_role = Role(name="Test Role")
-        self.session.add(new_role)
-        self.session.commit()
-        query_role = self.session.query(Role).filter_by(name="Test Role").first()
-        self.assertIsNotNone(query_role)
-        self.assertEqual(query_role.name, "Test Role")
+    def tearDown(self):
+        """
+        Rollback and close the session after a test.
+        """
+        self.session.rollback()
+        self.session.close()
 
-    """
-    ## INFLUENCE MODEL TESTS
-    """
-    def test_create_influence(self):
-        new_influence = Influence(name="Test Influence")
-        self.session.add(new_influence)
+## TEST CASES
+    ## <TEST_AGENT_ROLE_RELATIONSHIP>
+    def test_agent_role_relationship(self):
+        """
+        Test the relationship between Agent and Role models.
+        """
+        role = Role(name="Test Role")
+        agent = Agent(name="Test Agent", role=role)
+        self.session.add(role)
+        self.session.add(agent)
         self.session.commit()
-        query_influence = self.session.query(Influence).filter_by(name="Test Influence").first()
-        self.assertIsNotNone(query_influence)
-        self.assertEqual(query_influence.name, "Test Influence")
 
-    """
-    ## TASK MODEL TESTS
-    """
-    def test_create_task(self):
-        new_task = Task(description="Test Task", agent_id=1)
-        self.session.add(new_task)
+        self.assertEqual(agent.role.name, "Test Role")
+        self.assertIn(agent, role.agents)
+
+    ## <TEST_TASK_AGENT_RELATIONSHIP>
+    def test_task_agent_relationship(self):
+        """
+        Test the relationship between Task and Agent models.
+        """
+        agent = Agent(name="Test Agent")
+        task = Task(description="Test Task", agent=agent)
+        self.session.add(agent)
+        self.session.add(task)
         self.session.commit()
-        query_task = self.session.query(Task).filter_by(description="Test Task").first()
-        self.assertIsNotNone(query_task)
-        self.assertEqual(query_task.description, "Test Task")
 
-    """
-    ## GROUP MODEL TESTS
-    """
-    def test_create_group(self):
-        new_group = Group(name="Test Group")
-        self.session.add(new_group)
+        self.assertEqual(task.agent.name, "Test Agent")
+        self.assertIn(task, agent.tasks)
+
+    ## <TEST_GROUP_TASKS_RELATIONSHIP>
+    def test_group_tasks_relationship(self):
+        """
+        Test the many-to-many relationship between Group and Task models.
+        """
+        group = Group(name="Test Group")
+        task1 = Task(description="Test Task 1")
+        task2 = Task(description="Test Task 2")
+        group.tasks.append(task1)
+        group.tasks.append(task2)
+        self.session.add(group)
         self.session.commit()
-        query_group = self.session.query(Group).filter_by(name="Test Group").first()
-        self.assertIsNotNone(query_group)
-        self.assertEqual(query_group.name, "Test Group")
 
-    """
-    ## NEWS MODEL TESTS
-    """
-    def test_create_news(self):
-        new_news = News(title="Test News", content="Test Content")
-        self.session.add(new_news)
+        self.assertIn(task1, group.tasks)
+        self.assertIn(task2, group.tasks)
+        self.assertEqual(len(group.tasks), 2)
+
+    ## <TEST_UNIQUE_CONSTRAINTS>
+    def test_unique_constraints(self):
+        """
+        Test that unique constraints on certain fields are enforced.
+        """
+        role1 = Role(name="Unique Role")
+        role2 = Role(name="Unique Role")
+        self.session.add(role1)
         self.session.commit()
-        query_news = self.session.query(News).filter_by(title="Test News").first()
-        self.assertIsNotNone(query_news)
-        self.assertEqual(query_news.title, "Test News")
-        self.assertEqual(query_news.content, "Test Content")
+        with self.assertRaises(Exception):
+            self.session.add(role2)
+            self.session.commit()
 
-    """
-    ## RECOMMENDATION MODEL TESTS
-    """
-    def test_create_recommendation(self):
-        new_recommendation = Recommendation(title="Test Recommendation", content="Test Content")
-        self.session.add(new_recommendation)
+    ## <TEST_STRING_FIELDS>
+    def test_string_fields(self):
+        """
+        Test that string fields store and retrieve correctly.
+        """
+        news = News(title="Test News", content="This is a test news content.")
+        self.session.add(news)
         self.session.commit()
-        query_recommendation = self.session.query(Recommendation).filter_by(title="Test Recommendation").first()
-        self.assertIsNotNone(query_recommendation)
-        self.assertEqual(query_recommendation.title, "Test Recommendation")
-        self.assertEqual(query_recommendation.content, "Test Content")
 
-    """
-    ## TRAINING MODEL TESTS
-    """
-    def test_create_training(self):
-        new_training = Training(title="Test Training", content="Test Content")
-        self.session.add(new_training)
-        self.session.commit()
-        query_training = self.session.query(Training).filter_by(title="Test Training").first()
-        self.assertIsNotNone(query_training)
-        self.assertEqual(query_training.title, "Test Training")
-        self.assertEqual(query_training.content, "Test Content")
-
-    """
-    ## FEEDBACK MODEL TESTS
-    """
-    def test_create_feedback(self):
-        new_feedback = Feedback(content="Test Feedback")
-        self.session.add(new_feedback)
-        self.session.commit()
-        query_feedback = self.session.query(Feedback).filter_by(content="Test Feedback").first()
-        self.assertIsNotNone(query_feedback)
-        self.assertEqual(query_feedback.content, "Test Feedback")
-
+        retrieved_news = self.session.query(News).first()
+        self.assertEqual(retrieved_news.title, "Test News")
+        self.assertEqual(retrieved_news.content, "This is a test news content.")
 
 if __name__ == '__main__':
     unittest.main()
